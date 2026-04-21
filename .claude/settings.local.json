@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm -v)",
+      "Bash(corepack enable *)",
+      "Bash(corepack prepare *)",
+      "Bash(rm -f README.md)",
+      "Bash(pnpm create *)"
+    ]
+  }
+}

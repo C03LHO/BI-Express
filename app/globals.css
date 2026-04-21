@@ -1,0 +1,62 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-fraunces), ui-serif, Georgia, serif;
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-border: var(--border);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+/* Default theme: Lavender (light) — themes module will override in step 7 */
+:root {
+  --bg: #f6f4ff;
+  --surface: #ffffff;
+  --surface-elevated: #ffffff;
+  --border: #e6e1f5;
+  --text-primary: #1a1333;
+  --text-secondary: #4a4266;
+  --text-muted: #8b84a3;
+  --accent: #6d5bd0;
+  --accent-hover: #5a48c0;
+  --chart-1: #6d5bd0;
+  --chart-2: #9d8df0;
+  --chart-3: #4a3ba8;
+  --chart-4: #c4b8f5;
+  --chart-5: #3a2e85;
+  --chart-6: #e0d8fa;
+  --chart-7: #8374e0;
+  --chart-8: #2a1f66;
+  --radius: 1rem;
+}
+
+* {
+  border-color: var(--border);
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Export-friendly tweaks (applied during html2canvas capture) */
+.exporting {
+  box-shadow: none !important;
+}
+.exporting * {
+  text-shadow: none !important;
+}
