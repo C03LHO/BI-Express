@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, Fraunces } from "next/font/google";
+import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
 
 const inter = Inter({
@@ -17,7 +18,7 @@ const fraunces = Fraunces({
 export const metadata: Metadata = {
   title: "BI Express — planilha em dashboard, na hora",
   description:
-    "Faça upload de qualquer planilha (Excel, CSV) e receba um dashboard de BI visual, automático e que faz sentido.",
+    "Faça upload de qualquer planilha (Excel, CSV) e receba um dashboard de BI visual, automático e que faz sentido. 100% gratuito, roda no seu navegador.",
 };
 
 export default function RootLayout({
@@ -30,7 +31,9 @@ export default function RootLayout({
       lang="pt-BR"
       className={`${inter.variable} ${fraunces.variable} h-full antialiased`}
     >
-      <body className="flex min-h-full flex-col">{children}</body>
+      <body className="flex min-h-full flex-col">
+        <ThemeProvider>{children}</ThemeProvider>
+      </body>
     </html>
   );
 }

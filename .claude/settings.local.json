@@ -5,7 +5,8 @@
       "Bash(corepack enable *)",
       "Bash(corepack prepare *)",
       "Bash(rm -f README.md)",
-      "Bash(pnpm create *)"
+      "Bash(pnpm create *)",
+      "Bash(git commit -m ' *)"
     ]
   }
 }
