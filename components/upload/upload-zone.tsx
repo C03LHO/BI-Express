@@ -21,6 +21,7 @@ export function UploadZone() {
   const [drag, setDrag] = useState(false);
   const setTable = useAppStore((s) => s.setTable);
   const setSpec = useAppStore((s) => s.setSpec);
+  const view = useAppStore((s) => s.view);
   const router = useRouter();
 
   const handleFile = useCallback(
@@ -56,7 +57,7 @@ export function UploadZone() {
     await new Promise((r) => setTimeout(r, 10));
     const profiled = profileTable(candidate);
     setStep({ kind: "reading", label: "Gerando dashboard…" });
-    const spec = suggestDashboard(profiled);
+    const spec = suggestDashboard(profiled, view);
     setTable(profiled, filename);
     setSpec(spec);
     router.push("/dashboard");

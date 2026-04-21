@@ -49,6 +49,7 @@ function AnalysisPanel({ onClose }: { onClose: () => void }) {
   const setTable = useAppStore((s) => s.setTable);
   const filename = useAppStore((s) => s.filename);
   const setSpec = useAppStore((s) => s.setSpec);
+  const view = useAppStore((s) => s.view);
 
   const [tab, setTab] = useState<"cols" | "text" | "charts">("cols");
   const [labels, setLabels] = useState([...table.columnLabels]);
@@ -66,7 +67,7 @@ function AnalysisPanel({ onClose }: { onClose: () => void }) {
       profiles: table.profiles.map((p, i) => ({ ...p, kind: kinds[i], role: roles[i] })),
     };
     setTable(next, filename);
-    setSpec(suggestDashboard(next));
+    setSpec(suggestDashboard(next, view));
     onClose();
   };
 
@@ -226,17 +227,25 @@ function ColumnsTab({
               <input
                 value={labels[i]}
                 onChange={(e) => onLabel(i, e.target.value)}
-                className="min-w-0 flex-1 rounded-lg border bg-transparent px-2 py-1 text-sm"
-                style={{ borderColor: "var(--border)" }}
+                className="min-w-0 flex-1 rounded-lg border px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                style={{
+                  borderColor: "var(--border)",
+                  background: "var(--surface-elevated)",
+                  color: "var(--text-primary)",
+                }}
               />
               <select
                 value={kinds[i]}
                 onChange={(e) => onKind(i, e.target.value as ColumnKind)}
-                className="rounded-lg border bg-transparent px-2 py-1 text-xs"
-                style={{ borderColor: "var(--border)" }}
+                className="rounded-lg border px-2 py-1 text-xs outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                style={{
+                  borderColor: "var(--border)",
+                  background: "var(--surface-elevated)",
+                  color: "var(--text-primary)",
+                }}
               >
                 {KINDS.map((k) => (
-                  <option key={k} value={k}>
+                  <option key={k} value={k} style={{ background: "var(--surface)", color: "var(--text-primary)" }}>
                     {k}
                   </option>
                 ))}
@@ -244,11 +253,15 @@ function ColumnsTab({
               <select
                 value={roles[i]}
                 onChange={(e) => onRole(i, e.target.value as ColumnRole)}
-                className="rounded-lg border bg-transparent px-2 py-1 text-xs"
-                style={{ borderColor: "var(--border)" }}
+                className="rounded-lg border px-2 py-1 text-xs outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                style={{
+                  borderColor: "var(--border)",
+                  background: "var(--surface-elevated)",
+                  color: "var(--text-primary)",
+                }}
               >
                 {ROLES.map((r) => (
-                  <option key={r.v} value={r.v}>
+                  <option key={r.v} value={r.v} style={{ background: "var(--surface)", color: "var(--text-primary)" }}>
                     {r.label}
                   </option>
                 ))}
@@ -285,8 +298,12 @@ function TextTab({
         onChange={(e) => onChange(e.target.value)}
         placeholder="Ex: Registros de carga de minério, quero ver volume por produto e evolução diária."
         rows={5}
-        className="rounded-xl border bg-transparent p-3 text-sm"
-        style={{ borderColor: "var(--border)" }}
+        className="rounded-xl border p-3 text-sm outline-none focus:ring-2 focus:ring-[var(--accent)]"
+        style={{
+          borderColor: "var(--border)",
+          background: "var(--surface-elevated)",
+          color: "var(--text-primary)",
+        }}
       />
       <div className="flex items-center gap-2">
         <Button size="sm" onClick={onApply} disabled={value.trim().length < 3}>

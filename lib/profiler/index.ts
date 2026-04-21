@@ -77,7 +77,7 @@ export function profileTable(c: TableCandidate): ProfiledTable {
         .map(([value, count]) => ({ value, count }));
     }
 
-    const role = inferRole(kind, distinct, nonNull, cleaned.length);
+    const role = inferRole(kind, distinct, nonNull, cleaned.length, c.header[i], cleaned);
 
     const id = slugify(c.header[i], i);
     profiles.push({
@@ -218,22 +218,82 @@ function parseBrDate(s: string): Date | null {
   return new Date(y, parseInt(mm) - 1, parseInt(dd), parseInt(hh), parseInt(mi), parseInt(ss));
 }
 
+const ID_NAME_HINTS = [
+  "id",
+  "ids",
+  "codigo",
+  "código",
+  "cod",
+  "cód",
+  "prefixo",
+  "matricula",
+  "matrícula",
+  "numero",
+  "número",
+  "nº",
+  "no.",
+  "serie",
+  "série",
+  "cpf",
+  "cnpj",
+  "chassi",
+  "placa",
+  "registro",
+  "protocolo",
+  "ticket",
+  "ordem",
+  "os",
+  "nf",
+  "nota",
+  "lote",
+  "hash",
+  "guid",
+  "uuid",
+];
+
+function nameLooksLikeId(name: string): boolean {
+  const n = name
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .trim();
+  if (!n) return false;
+  for (const hint of ID_NAME_HINTS) {
+    const re = new RegExp(`(^|[^a-z])${hint}([^a-z]|$)`);
+    if (re.test(n)) return true;
+  }
+  return false;
+}
+
 function inferRole(
   kind: ColumnKind,
   distinct: number,
   nonNull: number,
   total: number,
+  name: string,
+  values: (string | number | boolean | Date | null)[],
 ): ColumnRole {
   const fillRate = total === 0 ? 0 : nonNull / total;
   if (fillRate < 0.05) return "ignore";
   if (kind === "date" || kind === "datetime") return "time";
-  if (kind === "number" || kind === "integer" || kind === "currency") {
-    // If nearly unique and monotonically increasing it's probably an ID.
-    if (distinct > nonNull * 0.95 && distinct > 30) return "identifier";
+  if (kind === "currency") return "measure";
+  if (kind === "number" || kind === "integer") {
+    if (nameLooksLikeId(name)) return "identifier";
+    // Only integers can be IDs by cardinality/magnitude; floats stay as measures.
+    if (kind === "integer") {
+      const cardRatio = nonNull === 0 ? 0 : distinct / nonNull;
+      const nums = values.filter((v): v is number => typeof v === "number");
+      const avgAbs = nums.length ? nums.reduce((a, b) => a + Math.abs(b), 0) / nums.length : 0;
+      // Huge magnitude + mostly unique → almost certainly an ID.
+      if (avgAbs >= 1e6 && cardRatio > 0.5) return "identifier";
+      // Nearly-perfect cardinality with decent distinct count → sequential ID.
+      if (cardRatio > 0.95 && distinct > 50) return "identifier";
+    }
     return "measure";
   }
   if (kind === "boolean") return "dimension";
   if (kind === "text") {
+    if (nameLooksLikeId(name)) return "identifier";
     const cardRatio = nonNull === 0 ? 0 : distinct / nonNull;
     if (cardRatio > 0.9 && distinct > 30) return "identifier";
     if (distinct <= 50 || cardRatio < 0.3) return "dimension";

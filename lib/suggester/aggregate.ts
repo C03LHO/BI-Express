@@ -168,6 +168,79 @@ export function aggregateHistogram(
   return out;
 }
 
+export function aggregateScatter(
+  p: ProfiledTable,
+  c: ChartSpec,
+): { x: number; y: number }[] {
+  const xi = c.xColumnId ? p.columnIds.indexOf(c.xColumnId) : -1;
+  const yi = c.yColumnId ? p.columnIds.indexOf(c.yColumnId) : -1;
+  if (xi < 0 || yi < 0) return [];
+  const out: { x: number; y: number }[] = [];
+  for (const row of p.rows) {
+    const x = row[xi];
+    const y = row[yi];
+    if (typeof x === "number" && typeof y === "number") out.push({ x, y });
+  }
+  return out.slice(0, 2000);
+}
+
+export function aggregateStacked(
+  p: ProfiledTable,
+  c: ChartSpec,
+): { categories: string[]; series: { name: string; data: number[] }[] } {
+  const xi = c.xColumnId ? p.columnIds.indexOf(c.xColumnId) : -1;
+  const gi = c.groupColumnId ? p.columnIds.indexOf(c.groupColumnId) : -1;
+  const yi = c.yColumnId ? p.columnIds.indexOf(c.yColumnId) : -1;
+  if (xi < 0 || gi < 0) return { categories: [], series: [] };
+
+  const agg = c.aggregation ?? (yi >= 0 ? "sum" : "count");
+  const byCat = new Map<string, Map<string, number[]>>();
+  for (const row of p.rows) {
+    const xv = row[xi];
+    const gv = row[gi];
+    if (xv === null || gv === null) continue;
+    const xk = formatCell(xv);
+    const gk = formatCell(gv);
+    const inner = byCat.get(xk) ?? new Map<string, number[]>();
+    const arr = inner.get(gk) ?? [];
+    if (yi >= 0 && typeof row[yi] === "number") arr.push(row[yi] as number);
+    else arr.push(1);
+    inner.set(gk, arr);
+    byCat.set(xk, inner);
+  }
+
+  const catTotals: { key: string; total: number }[] = [];
+  for (const [k, inner] of byCat) {
+    let total = 0;
+    for (const vs of inner.values()) total += reduce(vs, agg);
+    catTotals.push({ key: k, total });
+  }
+  catTotals.sort((a, b) => b.total - a.total);
+  const topCats = catTotals.slice(0, 12).map((c) => c.key);
+
+  const groupTotals = new Map<string, number>();
+  for (const cat of topCats) {
+    const inner = byCat.get(cat)!;
+    for (const [g, vs] of inner) {
+      groupTotals.set(g, (groupTotals.get(g) ?? 0) + reduce(vs, agg));
+    }
+  }
+  const topGroups = [...groupTotals.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6)
+    .map(([g]) => g);
+
+  const series = topGroups.map((g) => ({
+    name: g,
+    data: topCats.map((cat) => {
+      const inner = byCat.get(cat);
+      const vs = inner?.get(g);
+      return vs ? reduce(vs, agg) : 0;
+    }),
+  }));
+  return { categories: topCats, series };
+}
+
 // Helpers
 
 function reduce(vals: number[], agg: string): number {

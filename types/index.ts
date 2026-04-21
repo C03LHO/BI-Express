@@ -68,10 +68,16 @@ export type ChartType =
   | "bar"
   | "barh"
   | "line"
+  | "area"
   | "pie"
+  | "donut"
   | "scatter"
   | "histogram"
   | "heatmap"
+  | "treemap"
+  | "radar"
+  | "funnel"
+  | "stacked-bar"
   | "kpi";
 
 export interface ChartSpec {

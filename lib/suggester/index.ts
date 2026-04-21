@@ -1,13 +1,23 @@
-// Given a profiled table, propose KPI cards + up to 6 charts.
-// Rules in the brief: use real column names, never letters; cap cardinality;
-// "Top 10 + Outros" when too many categories; temporal binning when dense.
+// Given a profiled table, propose KPI cards + a list of charts.
+// Three views: overview (default), temporal, categorical — each emphasizes a
+// different analytical lens of the same data.
 
 import type { ProfiledTable } from "@/lib/profiler";
-import type { ChartSpec, DashboardSpec, KpiSpec } from "@/types";
+import type { ChartSpec, DashboardSpec, KpiSpec, ChartType } from "@/types";
 
-export function suggestDashboard(p: ProfiledTable): DashboardSpec {
+export type DashboardView = "overview" | "temporal" | "categorical";
+
+export function suggestDashboard(
+  p: ProfiledTable,
+  view: DashboardView = "overview",
+): DashboardSpec {
   const kpis = suggestKpis(p);
-  const charts = suggestCharts(p);
+  const charts =
+    view === "temporal"
+      ? suggestTemporal(p)
+      : view === "categorical"
+      ? suggestCategorical(p)
+      : suggestOverview(p);
   return { kpis, charts };
 }
 
@@ -16,7 +26,6 @@ function suggestKpis(p: ProfiledTable): KpiSpec[] {
     { id: "kpi_count", title: "Total de registros", aggregation: "count", format: "number" },
   ];
 
-  // Most relevant measure = largest magnitude × variance.
   const measureIdx = p.roles
     .map((r, i) => ({ r, i, p: p.profiles[i] }))
     .filter((x) => x.r === "measure" && x.p.mean !== undefined)
@@ -36,13 +45,9 @@ function suggestKpis(p: ProfiledTable): KpiSpec[] {
     });
   }
 
-  // Most relevant dimension = most filled, with 2-30 distinct values.
   const dimIdx = p.roles
     .map((r, i) => ({ r, i, p: p.profiles[i] }))
-    .filter(
-      (x) =>
-        x.r === "dimension" && x.p.distinct >= 2 && x.p.distinct <= 50,
-    )
+    .filter((x) => x.r === "dimension" && x.p.distinct >= 2 && x.p.distinct <= 50)
     .sort((a, b) => b.p.nonNull - a.p.nonNull)[0]?.i;
   if (dimIdx !== undefined) {
     kpis.push({
@@ -68,95 +73,197 @@ function suggestKpis(p: ProfiledTable): KpiSpec[] {
   return kpis.slice(0, 4);
 }
 
-function suggestCharts(p: ProfiledTable): ChartSpec[] {
+function suggestOverview(p: ProfiledTable): ChartSpec[] {
   const out: ChartSpec[] = [];
   const measures = indicesByRole(p, "measure");
   const dims = indicesByRole(p, "dimension");
   const times = indicesByRole(p, "time");
 
-  // Sort dimensions by "usefulness": not too few, not too many.
   dims.sort((a, b) => distinctScore(p, b) - distinctScore(p, a));
   measures.sort((a, b) => (p.profiles[b].stdev ?? 0) - (p.profiles[a].stdev ?? 0));
 
-  // 1. Time + main measure → evolution.
   if (times.length > 0 && measures.length > 0) {
-    out.push({
-      id: `chart_time_${p.columnIds[times[0]]}_${p.columnIds[measures[0]]}`,
-      title: `Evolução de ${p.columnLabels[measures[0]]} ao longo de ${p.columnLabels[times[0]]}`,
-      type: "line",
-      xColumnId: p.columnIds[times[0]],
-      yColumnId: p.columnIds[measures[0]],
+    out.push(chart("area", `Evolução de ${p.columnLabels[measures[0]]} ao longo de ${p.columnLabels[times[0]]}`, {
+      x: p.columnIds[times[0]],
+      y: p.columnIds[measures[0]],
       aggregation: "sum",
-    });
+    }));
   }
-
-  // 2. Top dimension × main measure.
   if (dims.length > 0 && measures.length > 0) {
-    out.push({
-      id: `chart_bar_${p.columnIds[dims[0]]}_${p.columnIds[measures[0]]}`,
-      title: `Total de ${p.columnLabels[measures[0]]} por ${p.columnLabels[dims[0]]}`,
-      type: "bar",
-      xColumnId: p.columnIds[dims[0]],
-      yColumnId: p.columnIds[measures[0]],
+    out.push(chart("bar", `Total de ${p.columnLabels[measures[0]]} por ${p.columnLabels[dims[0]]}`, {
+      x: p.columnIds[dims[0]],
+      y: p.columnIds[measures[0]],
       aggregation: "sum",
-    });
+    }));
   }
-
-  // 3. Second dimension count.
   if (dims.length > 1) {
     const d = dims[1];
     const distinct = p.profiles[d].distinct;
-    out.push({
-      id: `chart_count_${p.columnIds[d]}`,
-      title: `Distribuição por ${p.columnLabels[d]}`,
-      type: distinct <= 6 ? "pie" : "bar",
-      xColumnId: p.columnIds[d],
+    out.push(chart(distinct <= 6 ? "donut" : "bar", `Distribuição por ${p.columnLabels[d]}`, {
+      x: p.columnIds[d],
       aggregation: "count",
-    });
+    }));
   }
-
-  // 4. Average of secondary measure by top dimension.
   if (measures.length > 1 && dims.length > 0) {
-    out.push({
-      id: `chart_avg_${p.columnIds[dims[0]]}_${p.columnIds[measures[1]]}`,
-      title: `Média de ${p.columnLabels[measures[1]]} por ${p.columnLabels[dims[0]]}`,
-      type: "bar",
-      xColumnId: p.columnIds[dims[0]],
-      yColumnId: p.columnIds[measures[1]],
+    out.push(chart("bar", `Média de ${p.columnLabels[measures[1]]} por ${p.columnLabels[dims[0]]}`, {
+      x: p.columnIds[dims[0]],
+      y: p.columnIds[measures[1]],
       aggregation: "avg",
-    });
+    }));
   }
-
-  // 5. Histogram of primary measure.
   if (measures.length > 0) {
-    out.push({
-      id: `chart_hist_${p.columnIds[measures[0]]}`,
-      title: `Distribuição de ${p.columnLabels[measures[0]]}`,
-      type: "histogram",
-      xColumnId: p.columnIds[measures[0]],
-    });
+    out.push(chart("histogram", `Distribuição de ${p.columnLabels[measures[0]]}`, {
+      x: p.columnIds[measures[0]],
+    }));
   }
-
-  // 6. Solo dimension count, if we still have slots and unused dims.
-  if (out.length < 6 && dims.length > 2) {
+  if (dims.length > 2) {
     const d = dims[2];
-    const distinct = p.profiles[d].distinct;
-    out.push({
-      id: `chart_count2_${p.columnIds[d]}`,
-      title: `Contagem por ${p.columnLabels[d]}`,
-      type: distinct <= 6 ? "pie" : "bar",
-      xColumnId: p.columnIds[d],
+    out.push(chart("treemap", `Volume por ${p.columnLabels[d]}`, {
+      x: p.columnIds[d],
       aggregation: "count",
-    });
+    }));
   }
-
   return out.slice(0, 6);
 }
 
+function suggestTemporal(p: ProfiledTable): ChartSpec[] {
+  const out: ChartSpec[] = [];
+  const measures = indicesByRole(p, "measure");
+  const dims = indicesByRole(p, "dimension");
+  const times = indicesByRole(p, "time");
+
+  measures.sort((a, b) => (p.profiles[b].stdev ?? 0) - (p.profiles[a].stdev ?? 0));
+  dims.sort((a, b) => distinctScore(p, b) - distinctScore(p, a));
+
+  if (times.length === 0) return suggestOverview(p);
+  const t0 = times[0];
+
+  if (measures.length > 0) {
+    out.push(chart("area", `Evolução de ${p.columnLabels[measures[0]]}`, {
+      x: p.columnIds[t0],
+      y: p.columnIds[measures[0]],
+      aggregation: "sum",
+    }));
+  }
+  if (measures.length > 1) {
+    out.push(chart("line", `Média de ${p.columnLabels[measures[1]]} no tempo`, {
+      x: p.columnIds[t0],
+      y: p.columnIds[measures[1]],
+      aggregation: "avg",
+    }));
+  }
+  out.push(chart("bar", `Volume de registros por período (${p.columnLabels[t0]})`, {
+    x: p.columnIds[t0],
+    aggregation: "count",
+  }));
+  if (dims.length > 0 && measures.length > 0) {
+    out.push(chart("stacked-bar", `${p.columnLabels[measures[0]]} por ${p.columnLabels[t0]} e ${p.columnLabels[dims[0]]}`, {
+      x: p.columnIds[t0],
+      y: p.columnIds[measures[0]],
+      group: p.columnIds[dims[0]],
+      aggregation: "sum",
+    }));
+  }
+  if (times.length > 1) {
+    out.push(chart("line", `Atividade em ${p.columnLabels[times[1]]}`, {
+      x: p.columnIds[times[1]],
+      aggregation: "count",
+    }));
+  }
+  if (dims.length > 0) {
+    out.push(chart("bar", `Top ${p.columnLabels[dims[0]]} no período`, {
+      x: p.columnIds[dims[0]],
+      aggregation: "count",
+    }));
+  }
+  return out.slice(0, 6);
+}
+
+function suggestCategorical(p: ProfiledTable): ChartSpec[] {
+  const out: ChartSpec[] = [];
+  const measures = indicesByRole(p, "measure");
+  const dims = indicesByRole(p, "dimension");
+
+  dims.sort((a, b) => distinctScore(p, b) - distinctScore(p, a));
+  measures.sort((a, b) => (p.profiles[b].stdev ?? 0) - (p.profiles[a].stdev ?? 0));
+
+  if (dims.length === 0) return suggestOverview(p);
+
+  const d0 = dims[0];
+  const d0Distinct = p.profiles[d0].distinct;
+  if (measures.length > 0) {
+    out.push(chart("barh", `Ranking de ${p.columnLabels[measures[0]]} por ${p.columnLabels[d0]}`, {
+      x: p.columnIds[d0],
+      y: p.columnIds[measures[0]],
+      aggregation: "sum",
+    }));
+  } else {
+    out.push(chart("barh", `Top ${p.columnLabels[d0]}`, {
+      x: p.columnIds[d0],
+      aggregation: "count",
+    }));
+  }
+
+  out.push(chart(d0Distinct <= 6 ? "donut" : "treemap", `Participação por ${p.columnLabels[d0]}`, {
+    x: p.columnIds[d0],
+    y: measures[0] !== undefined ? p.columnIds[measures[0]] : undefined,
+    aggregation: measures[0] !== undefined ? "sum" : "count",
+  }));
+
+  if (dims.length > 1 && measures.length > 0) {
+    out.push(chart("stacked-bar", `${p.columnLabels[measures[0]]} por ${p.columnLabels[d0]} e ${p.columnLabels[dims[1]]}`, {
+      x: p.columnIds[d0],
+      y: p.columnIds[measures[0]],
+      group: p.columnIds[dims[1]],
+      aggregation: "sum",
+    }));
+  }
+  if (dims.length > 1) {
+    out.push(chart("funnel", `Distribuição por ${p.columnLabels[dims[1]]}`, {
+      x: p.columnIds[dims[1]],
+      aggregation: "count",
+    }));
+  }
+  if (measures.length > 1) {
+    out.push(chart("bar", `Média de ${p.columnLabels[measures[1]]} por ${p.columnLabels[d0]}`, {
+      x: p.columnIds[d0],
+      y: p.columnIds[measures[1]],
+      aggregation: "avg",
+    }));
+  }
+  if (dims.length > 2) {
+    out.push(chart("radar", `Perfil de ${p.columnLabels[dims[2]]}`, {
+      x: p.columnIds[dims[2]],
+      aggregation: "count",
+    }));
+  }
+  return out.slice(0, 6);
+}
+
+function chart(
+  type: ChartType,
+  title: string,
+  opts: {
+    x?: string;
+    y?: string;
+    group?: string;
+    aggregation?: "sum" | "avg" | "count" | "min" | "max" | "median";
+  },
+): ChartSpec {
+  const idParts = [type, opts.x, opts.y, opts.group].filter(Boolean).join("_");
+  return {
+    id: `chart_${idParts}`,
+    title,
+    type,
+    xColumnId: opts.x,
+    yColumnId: opts.y,
+    groupColumnId: opts.group,
+    aggregation: opts.aggregation,
+  };
+}
+
 function indicesByRole(p: ProfiledTable, role: string): number[] {
-  return p.roles
-    .map((r, i) => (r === role ? i : -1))
-    .filter((i) => i >= 0);
+  return p.roles.map((r, i) => (r === role ? i : -1)).filter((i) => i >= 0);
 }
 
 function distinctScore(p: ProfiledTable, i: number): number {

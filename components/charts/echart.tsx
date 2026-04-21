@@ -2,7 +2,16 @@
 
 import { useEffect, useRef } from "react";
 import * as echarts from "echarts/core";
-import { BarChart, LineChart, PieChart, ScatterChart, HeatmapChart } from "echarts/charts";
+import {
+  BarChart,
+  LineChart,
+  PieChart,
+  ScatterChart,
+  HeatmapChart,
+  TreemapChart,
+  RadarChart,
+  FunnelChart,
+} from "echarts/charts";
 import {
   GridComponent,
   TitleComponent,
@@ -20,6 +29,9 @@ echarts.use([
   PieChart,
   ScatterChart,
   HeatmapChart,
+  TreemapChart,
+  RadarChart,
+  FunnelChart,
   GridComponent,
   TitleComponent,
   TooltipComponent,
