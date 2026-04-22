@@ -45,7 +45,11 @@ export function UploadZone() {
         }
         await commit(candidates[0], file.name);
       } catch (e) {
-        setStep({ kind: "error", message: (e as Error).message });
+        console.error("[BI Express] Falha no processamento:", e);
+        setStep({
+          kind: "error",
+          message: (e as Error)?.message || "Erro desconhecido ao processar o arquivo.",
+        });
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -53,14 +57,24 @@ export function UploadZone() {
   );
 
   async function commit(candidate: TableCandidate, filename: string) {
-    setStep({ kind: "reading", label: "Analisando colunas…" });
-    await new Promise((r) => setTimeout(r, 10));
-    const profiled = profileTable(candidate);
-    setStep({ kind: "reading", label: "Gerando dashboard…" });
-    const spec = suggestDashboard(profiled, view);
-    setTable(profiled, filename);
-    setSpec(spec);
-    router.push("/dashboard");
+    try {
+      setStep({ kind: "reading", label: "Analisando colunas…" });
+      await new Promise((r) => setTimeout(r, 10));
+      const profiled = profileTable(candidate);
+      setStep({ kind: "reading", label: "Gerando dashboard…" });
+      const spec = suggestDashboard(profiled, view);
+      setTable(profiled, filename);
+      setSpec(spec);
+      router.push("/dashboard");
+    } catch (e) {
+      console.error("[BI Express] commit() falhou:", e);
+      setStep({
+        kind: "error",
+        message:
+          "Não consegui gerar o dashboard para este arquivo: " +
+          ((e as Error)?.message || "erro desconhecido"),
+      });
+    }
   }
 
   const onInput = (e: React.ChangeEvent<HTMLInputElement>) => {

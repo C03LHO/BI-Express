@@ -7,9 +7,48 @@ import type { DashboardSpec } from "@/types";
 import type { DashboardView } from "@/lib/suggester";
 import { DEFAULT_THEME_ID } from "@/lib/themes";
 
+export const FONT_FAMILIES = [
+  {
+    id: "inter",
+    name: "Inter",
+    stack: "var(--font-inter), ui-sans-serif, system-ui, sans-serif",
+  },
+  {
+    id: "system",
+    name: "Sistema",
+    stack: "ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
+  },
+  {
+    id: "serif",
+    name: "Fraunces (Serifa)",
+    stack: "var(--font-fraunces), ui-serif, Georgia, serif",
+  },
+  {
+    id: "mono",
+    name: "Monospace",
+    stack: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+  },
+] as const;
+
+export type FontFamilyId = (typeof FONT_FAMILIES)[number]["id"];
+
+export const FONT_SCALES = [
+  { id: "sm", name: "Pequeno", size: 0.9 },
+  { id: "md", name: "Padrão", size: 1.0 },
+  { id: "lg", name: "Grande", size: 1.1 },
+  { id: "xl", name: "Muito grande", size: 1.2 },
+] as const;
+
+export type FontScaleId = (typeof FONT_SCALES)[number]["id"];
+
 interface AppState {
   themeId: string;
   setThemeId: (id: string) => void;
+
+  fontFamily: FontFamilyId;
+  setFontFamily: (id: FontFamilyId) => void;
+  fontScale: FontScaleId;
+  setFontScale: (id: FontScaleId) => void;
 
   // runtime-only — not persisted (profiled tables can be huge)
   table: ProfiledTable | null;
@@ -29,6 +68,11 @@ export const useAppStore = create<AppState>()(
       themeId: DEFAULT_THEME_ID,
       setThemeId: (id) => set({ themeId: id }),
 
+      fontFamily: "inter",
+      setFontFamily: (id) => set({ fontFamily: id }),
+      fontScale: "md",
+      setFontScale: (id) => set({ fontScale: id }),
+
       table: null,
       filename: null,
       spec: null,
@@ -42,7 +86,11 @@ export const useAppStore = create<AppState>()(
     {
       name: "bi-express-store",
       storage: createJSONStorage(() => localStorage),
-      partialize: (s) => ({ themeId: s.themeId }),
+      partialize: (s) => ({
+        themeId: s.themeId,
+        fontFamily: s.fontFamily,
+        fontScale: s.fontScale,
+      }),
     },
   ),
 );

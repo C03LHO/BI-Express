@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { Sparkles, X, Wand2 } from "lucide-react";
 import type { ColumnRole, ColumnKind } from "@/types";
 import type { ProfiledTable } from "@/lib/profiler";
@@ -89,10 +90,13 @@ function AnalysisPanel({ onClose }: { onClose: () => void }) {
     setTab("cols");
   };
 
-  return (
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  const content = (
     <div
-      className="fixed inset-0 z-50 flex justify-end"
-      style={{ background: "rgba(0,0,0,0.45)" }}
+      className="fixed inset-0 z-[9999] flex justify-end"
+      style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(6px)" }}
       onClick={onClose}
     >
       <div
@@ -134,9 +138,10 @@ function AnalysisPanel({ onClose }: { onClose: () => void }) {
               className={cn(
                 "rounded-full px-3 py-1 text-xs font-medium transition",
                 tab === v
-                  ? "bg-[var(--accent)] text-white"
+                  ? "bg-[var(--accent)] text-[var(--on-accent)] shadow"
                   : "border border-[var(--border)] hover:bg-[var(--surface-elevated)]",
               )}
+              style={tab !== v ? { color: "var(--text-primary)" } : undefined}
             >
               {label}
             </button>
@@ -189,6 +194,9 @@ function AnalysisPanel({ onClose }: { onClose: () => void }) {
       </div>
     </div>
   );
+
+  if (!mounted) return null;
+  return createPortal(content, document.body);
 }
 
 function ColumnsTab({

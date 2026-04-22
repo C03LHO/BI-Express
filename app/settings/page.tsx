@@ -58,7 +58,7 @@ export default function SettingsPage() {
                 onClick={() => setProvider(p)}
                 className={`rounded-full px-3 py-1 text-xs font-medium ${
                   provider === p
-                    ? "bg-[var(--accent)] text-white"
+                    ? "bg-[var(--accent)] text-[var(--on-accent)]"
                     : "border border-[var(--border)] hover:bg-[var(--surface-elevated)]"
                 }`}
               >

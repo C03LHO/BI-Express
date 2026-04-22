@@ -110,7 +110,7 @@ export default function DashboardPage() {
               className={cn(
                 "flex-1 rounded-lg px-4 py-2 text-left text-sm transition",
                 view === v.v
-                  ? "bg-[var(--accent)] text-white shadow"
+                  ? "bg-[var(--accent)] text-[var(--on-accent)] shadow"
                   : "hover:bg-[var(--surface-elevated)]",
               )}
               title={v.hint}
@@ -118,7 +118,7 @@ export default function DashboardPage() {
               <div className="font-medium">{v.label}</div>
               <div
                 className="text-[10px] opacity-80"
-                style={{ color: view === v.v ? "rgba(255,255,255,0.9)" : "var(--text-muted)" }}
+                style={{ color: view === v.v ? "var(--on-accent)" : "var(--text-muted)" }}
               >
                 {v.hint}
               </div>

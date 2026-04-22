@@ -103,7 +103,7 @@ export function ChartCard({
                         className={cn(
                           "block w-full rounded-lg px-3 py-1.5 text-left text-xs transition",
                           spec.type === t.v
-                            ? "bg-[var(--accent)] text-white"
+                            ? "bg-[var(--accent)] text-[var(--on-accent)]"
                             : "hover:bg-[var(--surface)]",
                         )}
                       >

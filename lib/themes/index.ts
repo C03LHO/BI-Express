@@ -263,6 +263,26 @@ export function applyTheme(theme: Theme) {
   if (typeof document === "undefined") return;
   const root = document.documentElement;
   for (const [k, v] of Object.entries(theme.vars)) root.style.setProperty(k, v);
+  // Derive a readable foreground for elements painted with --accent.
+  // Bright accents (light greys, pastel yellows) need dark text; saturated
+  // mid/dark accents need white. Based on sRGB relative luminance.
+  const onAccent = pickOnAccent(theme.vars["--accent"] ?? "#000000");
+  root.style.setProperty("--on-accent", onAccent);
   root.dataset.theme = theme.id;
   root.dataset.mode = theme.mode;
+}
+
+function pickOnAccent(hex: string): string {
+  const m = hex.trim().match(/^#?([0-9a-f]{6})$/i);
+  if (!m) return "#ffffff";
+  const n = parseInt(m[1], 16);
+  const r = (n >> 16) & 0xff;
+  const g = (n >> 8) & 0xff;
+  const b = n & 0xff;
+  const srgb = [r, g, b].map((c) => {
+    const x = c / 255;
+    return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4);
+  });
+  const L = 0.2126 * srgb[0] + 0.7152 * srgb[1] + 0.0722 * srgb[2];
+  return L > 0.6 ? "#0a0a0a" : "#ffffff";
 }
