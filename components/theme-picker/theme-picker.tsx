@@ -138,28 +138,32 @@ function ThemePickerModal({ onClose }: { onClose: () => void }) {
                       background: t.vars["--bg"],
                     }}
                   >
-                    <div className="relative flex h-28 items-center justify-center p-4">
+                    <div className="relative flex h-20 shrink-0 items-center justify-center p-3">
                       <ThemePreview vars={t.vars} />
                       {active ? (
                         <span
                           className="absolute right-2 top-2 flex size-6 items-center justify-center rounded-full shadow"
-                          style={{ background: t.vars["--accent"], color: "#fff" }}
+                          style={{
+                            background: t.vars["--accent"],
+                            color: t.mode === "dark" ? "#0a0a0a" : "#ffffff",
+                          }}
                         >
                           <Check className="size-3.5" />
                         </span>
                       ) : null}
                     </div>
                     <div
-                      className="flex items-center justify-between border-t px-3 py-2 text-xs"
+                      className="flex shrink-0 items-center justify-between gap-2 border-t px-3 py-3"
                       style={{
                         background: t.vars["--surface"],
                         borderColor: t.vars["--border"],
                         color: t.vars["--text-primary"],
+                        lineHeight: 1.2,
                       }}
                     >
-                      <span className="font-medium">{t.name}</span>
+                      <span className="truncate text-sm font-medium">{t.name}</span>
                       <span
-                        className="text-[10px] uppercase tracking-wider"
+                        className="shrink-0 text-[10px] uppercase tracking-wider"
                         style={{ color: t.vars["--text-muted"] }}
                       >
                         {t.mode}
